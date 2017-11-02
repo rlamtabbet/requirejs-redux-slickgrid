@@ -28,8 +28,8 @@ define(["redux"], function(Redux) {
   const initialState = {
     pending: false,
     fetched: false,
-    repos: [],
-    error: null
+    error: null,
+    repos: []
   };
 
   const reposReducer = (state = initialState, action) => {

@@ -113,10 +113,10 @@
     'axios',
     'redux',
     'thunk',
-    'reducers/reducers',
     "vo/repoVO",
+    'reducers/reducers',
     "views/myWidget"
-  ], function ($, axios, redux, thunk, reducers, repoVO, MyWidget) {
+  ], function ($, axios, redux, thunk, RepoVO, reducers, MyWidget) {
     const { createStore, applyMiddleware, compose } = redux;
     const loggerMiddleware = ({ getState }) => (next) => (action) => {
       logger.info("will dispatch", action);
@@ -144,15 +144,15 @@
       applyMiddleware(...middleware)
     ));
 
-    // store.subscribe(() => {
-    //   logger.info("Store Changed", store.getState());
-    // });
+    const getReposState = ({repos}) => repos.repos.map(function (curr) {
+      return new RepoVO(curr.name, curr.created_at);
+    });
 
-    const repos = [];
-
-    repos.push(new repoVO("NodeJS", "2013-06-28T15:35:27Z"));
-    repos.push(new repoVO("ReactJS", "2013-06-28T15:35:27Z"));
-    repos.push(new repoVO("Redux", "2013-06-28T15:35:27Z"));
+    const unsubscribe = store.subscribe(() => {
+      let repos = getReposState(store.getState());
+      view.option('repos', repos);
+      logger.info("Store Changed", store.getState());
+    });
 
     const handleGetRepos = function (event, data) {
       store.dispatch((dispatch) => {
@@ -168,8 +168,8 @@
     };
 
     const view = new MyWidget({
-      repos,
-      get: handleGetRepos
+      repos: getReposState(store.getState()),
+      getrepos: handleGetRepos
     }, $('#simpleSelectah'));
 
     // setTimeout(function () {
