@@ -1,0 +1,9 @@
+<input type="text" class="handle" placeholder="insert your github username">
+<button class="submit">Get Repos</button>
+
+<h2>I found the following {{pluralize repos.length 'repo' 'repos'}}</h2>
+<ul class="repos_list">
+    {{#each repos}}
+    <li>{{this}}</li>
+    {{/each}}
+</ul>

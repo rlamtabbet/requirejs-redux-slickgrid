@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Require JS Redux Basic Example</title>
+  <script src="src/libs/log4javascript/log4javascript_uncompressed.js"></script>
+  <script src="src/libs/require/require.js"></script>
+</head>
+
+<body>
+  <h2>Require JS Redux Basic Example.</h2>
+  <div id="simpleSelectah"></div>
+</body>
+
+<script>
+
+  var logger = log4javascript.getLogger("RequireJSBasicsYoHolmes");
+  logger.setLevel(log4javascript.Level.ALL);
+  logger.addAppender(new log4javascript.BrowserConsoleAppender());
+  window.logger = logger;
+  logger.debug("debug: index.html::log4javascript ready to rock.");
+
+  require.config({
+    baseUrl: "./src",
+    urlArgs: "bust=" + (new Date()).getTime(),
+    waitSeconds: 10,
+    map: {
+      '*': {
+        css: 'libs/require-css/css'
+      }
+    },
+    paths: {
+      handlebars: "./libs/require-handlebars-plugin/hbs/handlebars",
+      hbs: "./libs/require-handlebars-plugin/hbs",
+      jquery: './libs/jquery',
+      jqueryui: "./libs/jquery-ui",
+      underscore: './libs/underscore',
+      backbone: './libs/backbone',
+      redux: './libs/redux',
+      thunk: './libs/redux-thunk',
+      axios: './libs/axios'
+    },
+    hbs: {
+      helpers: true,            // default: true
+      templateExtension: 'hbs', // default: 'hbs
+      helperDirectory: 'libs/helpers/' //default: /templates/helpers/
+    },
+    packages: [
+      {
+        name: "jquery",
+        location: "./libs/jquery",
+        main: "jquery"
+      },
+      {
+        name: "jqueryui",
+        location: "./libs/jquery-ui",
+        main: "jquery-ui.min"
+      },
+      {
+        name: "jquery.plugins",
+        location: "./common",
+        main: "jquery.plugins"
+      },
+      {
+        name: "json2",
+        location: "./libs/json2",
+        main: "json2"
+      },
+      {
+        name: "underscore",
+        location: "./libs/underscore",
+        main: "underscore"
+      },
+      {
+        name: "backbone",
+        location: "./libs/backbone",
+        main: "backbone"
+      },
+      {
+        name: "redux",
+        location: "./libs/redux",
+        main: "redux"
+      },
+      {
+        name: "thunk",
+        location: "./libs/redux-thunk",
+        main: "redux-thunk"
+      },
+      {
+        name: "axios",
+        location: "./libs/axios",
+        main: "axios"
+      }
+    ],
+    wrapShim: true,
+    shim: {
+      jqueryui: {
+        deps: ['jquery']
+      },
+      underscore: {
+        exports: '_'
+      },
+      backbone: {
+        deps: ["underscore", "jquery"],
+        exports: "Backbone"
+      },
+      waitSeconds: 15
+    }
+  });
+
+  require([
+    'jquery.plugins',
+    'axios',
+    'redux',
+    'thunk',
+    'reducers/reducers',
+    "vo/repoVO",
+    "views/myWidget"
+  ], function ($, axios, redux, thunk, reducers, repoVO, MyWidget) {
+    const { createStore, applyMiddleware, compose } = redux;
+    const loggerMiddleware = ({ getState }) => (next) => (action) => {
+      logger.info("will dispatch", action);
+
+      // Call the next dispatch method in the middleware chain.
+      let returnValue = next(action);
+
+      logger.info('state after dispatch', getState());
+
+      // This will likely be the action itself, unless
+      // a middleware further in chain changed it.
+      return returnValue;
+    };
+
+    const errorMiddleware = (store) => (next) => (action) => {
+      try {
+        next(action);
+      } catch (e) {
+        logger.error("AHHHHH!! ", e);
+      }
+    }
+    const middleware = [thunk.default, loggerMiddleware, errorMiddleware];
+    const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+    const store = createStore(reducers, /* preloadedState, */ composeEnhancers(
+      applyMiddleware(...middleware)
+    ));
+
+    // store.subscribe(() => {
+    //   logger.info("Store Changed", store.getState());
+    // });
+
+    const repos = [];
+
+    repos.push(new repoVO("NodeJS", "2013-06-28T15:35:27Z"));
+    repos.push(new repoVO("ReactJS", "2013-06-28T15:35:27Z"));
+    repos.push(new repoVO("Redux", "2013-06-28T15:35:27Z"));
+
+    const handleGetRepos = function (event, data) {
+      store.dispatch((dispatch) => {
+        dispatch({ type: 'FETCH_REPOS_PENDING', payload: data.handle });
+        axios.get(`https://api.github.com/users/${data.handle}/repos?per_page=15`)
+          .then(({ data }) => {
+            dispatch({ type: "FETCH_REPOS_FULFILLED", payload: data });
+          })
+          .catch((err) => {
+            dispatch({ type: "FETCH_REPOS_REJECTED", payload: data });
+          });
+      });
+    };
+
+    const view = new MyWidget({
+      repos,
+      get: handleGetRepos
+    }, $('#simpleSelectah'));
+
+    // setTimeout(function () {
+    //   logger.info('destroy');
+    //   view.element.empty();
+    //   store.dispatch({ type: 'ERR', payload: "ERR!!!!!" });
+    // }, 60000);
+
+  });
+</script>
+
+</html>
