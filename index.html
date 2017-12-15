@@ -133,14 +133,11 @@
 
   require([
     'jquery.plugins',
-    'axios',
     'redux',
     'thunk',
     'reducers/reducers',
-    'constants/index',
-    "vo/bookVO",
     "views/myWidget"
-  ], function ($, axios, redux, thunk, reducers, constants, bookVO, MyWidget) {
+  ], function ($, redux, thunk, reducers, MyWidget) {
     const {
       createStore,
       applyMiddleware,
@@ -176,51 +173,8 @@
       applyMiddleware(...middleware)
     ));
 
-    const parseBooksState = ({
-      books
-    }) => books.items.map((curr) => new bookVO(curr.volumeInfo));
-
-    const unsubscribe = store.subscribe(() => {
-      let books = parseBooksState(store.getState());
-
-      view.option('books', books);
-      logger.info("Store Changed", store.getState());
-    });
-
-    const {
-      FETCH_DATA_PENDING,
-      FETCH_DATA_FULFILLED,
-      FETCH_DATA_REJECTED
-    } = constants;
-
-    const fetch = function (event, data) {
-      store.dispatch((dispatch) => {
-        dispatch({
-          type: FETCH_DATA_PENDING,
-          payload: data.handle
-        });
-        axios.get(
-            `https://www.googleapis.com/books/v1/volumes?q=${data.handle}&maxResults=40`)
-          .then(({
-            data
-          }) => {
-            dispatch({
-              type: FETCH_DATA_FULFILLED,
-              payload: data
-            });
-          })
-          .catch((err) => {
-            dispatch({
-              type: FETCH_DATA_REJECTED,
-              payload: data
-            });
-          });
-      });
-    };
-
     const view = new MyWidget({
-      books: parseBooksState(store.getState()),
-      fetch
+      store
     }, $('#simpleSelectah'));
 
   });
