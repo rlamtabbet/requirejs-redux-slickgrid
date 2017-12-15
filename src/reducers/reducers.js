@@ -1,4 +1,4 @@
-define(["redux"], function(Redux) {
+define(["../constants/index", "redux"], function(constants, Redux) {
   "use strict";
 
   const errorReducer = (state = {}, action) => {
@@ -29,27 +29,33 @@ define(["redux"], function(Redux) {
     pending: false,
     fetched: false,
     error: null,
-    repos: []
+    items: []
   };
 
-  const reposReducer = (state = initialState, action) => {
+  const {
+    FETCH_DATA_PENDING,
+    FETCH_DATA_FULFILLED,
+    FETCH_DATA_REJECTED
+  } = constants;
+
+  const bookReducer = (state = initialState, action) => {
     switch (action.type) {
-      case "FETCH_REPOS_PENDING":
+      case FETCH_DATA_PENDING:
         return { ...state, pending: true, fetched: false };
-      case "FETCH_REPOS_FULFILLED":
+      case FETCH_DATA_FULFILLED:
         return {
           ...state,
           pending: false,
           fetched: true,
-          repos: action.payload
+          items: action.payload.items
         };
-      case "FETCH_REPOS_REJECTED":
+      case FETCH_DATA_REJECTED:
         return {
           ...state,
           pending: false,
           error: action.payload
         };
-      case "REMOVE_REPOS":
+      case "CLEAR_ALL":
         return [];
       default:
         return state;
@@ -59,7 +65,7 @@ define(["redux"], function(Redux) {
   const reducers = Redux.combineReducers({
     error: errorReducer,
     user: userReducer,
-    repos: reposReducer
+    books: bookReducer
   });
 
   return reducers;

@@ -2,18 +2,16 @@
 <html>
 
 <head>
-  <title>Require JS Redux Basic Example</title>
+  <title>Require JS Redux SlickGrid Example</title>
   <script src="src/libs/log4javascript/log4javascript_uncompressed.js"></script>
   <script src="src/libs/require/require.js"></script>
 </head>
 
 <body>
-  <h2>Require JS Redux Basic Example.</h2>
   <div id="simpleSelectah"></div>
 </body>
 
 <script>
-
   var logger = log4javascript.getLogger("RequireJSBasicsYoHolmes");
   logger.setLevel(log4javascript.Level.ALL);
   logger.addAppender(new log4javascript.BrowserConsoleAppender());
@@ -22,7 +20,7 @@
 
   require.config({
     baseUrl: "./src",
-    urlArgs: "bust=" + (new Date()).getTime(),
+    // urlArgs: "bust=" + (new Date()).getTime(),
     waitSeconds: 10,
     map: {
       '*': {
@@ -38,15 +36,19 @@
       backbone: './libs/backbone',
       redux: './libs/redux',
       thunk: './libs/redux-thunk',
-      axios: './libs/axios'
+      axios: './libs/axios',
+
+      // SlickGrid
+      'libs/slickgrid/slick.core': 'libs/slickgrid/2.1/slick.core',
+      'libs/slickgrid/dragEvent': 'libs/slickgrid/2.1/lib/jquery.event.drag-2.2',
+      'libs/slickgrid/dropEvent': 'libs/slickgrid/2.1/lib/jquery.event.drop-2.2',
     },
     hbs: {
-      helpers: true,            // default: true
+      helpers: true, // default: true
       templateExtension: 'hbs', // default: 'hbs
       helperDirectory: 'libs/helpers/' //default: /templates/helpers/
     },
-    packages: [
-      {
+    packages: [{
         name: "jquery",
         location: "./libs/jquery",
         main: "jquery"
@@ -104,6 +106,27 @@
         deps: ["underscore", "jquery"],
         exports: "Backbone"
       },
+      // SlickGrid
+      "libs/slickgrid/dragEvent": {
+        deps: ['jquery'],
+        exports: '$.fn.drag'
+      },
+      "libs/slickgrid/dropEvent": {
+        deps: ["jquery"],
+        exports: '$.fn.drop'
+      },
+      "libs/slickgrid/slick.core": {
+        deps: ["jquery"],
+        exports: "Slick"
+      },
+      "plugins/slickgrid/slick.grid": {
+        deps: ["jquery",
+          "slickgrid/slick.core",
+          "slickgrid/dragEvent",
+          "slickgrid/dropEvent"
+        ],
+        exports: "Slick.Grid"
+      },
       waitSeconds: 15
     }
   });
@@ -113,12 +136,20 @@
     'axios',
     'redux',
     'thunk',
-    "vo/repoVO",
     'reducers/reducers',
+    'constants/index',
+    "vo/bookVO",
     "views/myWidget"
-  ], function ($, axios, redux, thunk, RepoVO, reducers, MyWidget) {
-    const { createStore, applyMiddleware, compose } = redux;
-    const loggerMiddleware = ({ getState }) => (next) => (action) => {
+  ], function ($, axios, redux, thunk, reducers, constants, bookVO, MyWidget) {
+    const {
+      createStore,
+      applyMiddleware,
+      compose
+    } = redux;
+
+    const loggerMiddleware = ({
+      getState
+    }) => (next) => (action) => {
       logger.info("will dispatch", action);
 
       // Call the next dispatch method in the middleware chain.
@@ -138,45 +169,59 @@
         logger.error("AHHHHH!! ", e);
       }
     }
+
     const middleware = [thunk.default, loggerMiddleware, errorMiddleware];
     const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
     const store = createStore(reducers, /* preloadedState, */ composeEnhancers(
       applyMiddleware(...middleware)
     ));
 
-    const getReposState = ({repos}) => repos.repos.map(function (curr) {
-      return new RepoVO(curr.name, curr.created_at);
-    });
+    const parseBooksState = ({
+      books
+    }) => books.items.map((curr) => new bookVO(curr.volumeInfo));
 
     const unsubscribe = store.subscribe(() => {
-      let repos = getReposState(store.getState());
-      view.option('repos', repos);
+      let books = parseBooksState(store.getState());
+
+      view.option('books', books);
       logger.info("Store Changed", store.getState());
     });
 
-    const handleGetRepos = function (event, data) {
+    const {
+      FETCH_DATA_PENDING,
+      FETCH_DATA_FULFILLED,
+      FETCH_DATA_REJECTED
+    } = constants;
+
+    const fetch = function (event, data) {
       store.dispatch((dispatch) => {
-        dispatch({ type: 'FETCH_REPOS_PENDING', payload: data.handle });
-        axios.get(`https://api.github.com/users/${data.handle}/repos?per_page=15`)
-          .then(({ data }) => {
-            dispatch({ type: "FETCH_REPOS_FULFILLED", payload: data });
+        dispatch({
+          type: FETCH_DATA_PENDING,
+          payload: data.handle
+        });
+        axios.get(
+            `https://www.googleapis.com/books/v1/volumes?q=${data.handle}&maxResults=40`)
+          .then(({
+            data
+          }) => {
+            dispatch({
+              type: FETCH_DATA_FULFILLED,
+              payload: data
+            });
           })
           .catch((err) => {
-            dispatch({ type: "FETCH_REPOS_REJECTED", payload: data });
+            dispatch({
+              type: FETCH_DATA_REJECTED,
+              payload: data
+            });
           });
       });
     };
 
     const view = new MyWidget({
-      repos: getReposState(store.getState()),
-      getrepos: handleGetRepos
+      books: parseBooksState(store.getState()),
+      fetch
     }, $('#simpleSelectah'));
-
-    // setTimeout(function () {
-    //   logger.info('destroy');
-    //   view.element.empty();
-    //   store.dispatch({ type: 'ERR', payload: "ERR!!!!!" });
-    // }, 60000);
 
   });
 </script>

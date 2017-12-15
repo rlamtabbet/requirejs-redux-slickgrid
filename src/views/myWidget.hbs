@@ -1,9 +1,16 @@
-<input type="text" class="handle" placeholder="insert your github username">
-<button class="submit">Get Repos</button>
-
-<h2>I found the following {{pluralize repos.length 'repo' 'repos'}}</h2>
-<ul class="repos_list">
-    {{#each repos}}
-    <li>{{this}}</li>
-    {{/each}}
-</ul>
+<div class="result">
+    <div class="input-group input-group-sm">
+        <input class="form-control" type="text" id="handle" placeholder="Search book title...">
+        <button id="submit" class="input-group-btn button">
+            Fetch
+        </button>
+    </div>
+    <ul class="books_list">
+        {{#each books}}
+        <li>{{this}}</li>
+        {{/each}}
+    </ul>
+    <div class="filters"></div>
+    <div class="grid"></div>
+    <div class="progress"></div>
+</div>

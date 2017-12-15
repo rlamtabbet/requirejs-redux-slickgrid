@@ -5,7 +5,7 @@ define(["jquery.plugins", "hbs!./myWidget", "css!./myWidget"], function(
   "use strict";
 
   /**
-   * Tweets widget.
+   * Books widget.
    * @class myWidget
    * @memberof views.myWidget
    */
@@ -13,7 +13,7 @@ define(["jquery.plugins", "hbs!./myWidget", "css!./myWidget"], function(
     options: {
       className: "ux-widget",
       title: "Unavailable",
-      tweets: []
+      books: []
     },
 
     _create: function() {
@@ -23,11 +23,12 @@ define(["jquery.plugins", "hbs!./myWidget", "css!./myWidget"], function(
     },
 
     _setOption: function(key, value) {
-        this.options[key] = value;
+      this.options[key] = value;
 
-        if (key === 'repos') {
-          this._render();
-        }
+      if (key === "books") {
+        this._render();
+        // this._loadData();
+      }
     },
 
     /**
@@ -35,19 +36,32 @@ define(["jquery.plugins", "hbs!./myWidget", "css!./myWidget"], function(
      * @private
      */
     _render: function() {
-      var repos = this.options.repos;
-
-      // if (!repos.length) {
-      //   logger.error(
-      //     "Error::render, Our person's list is empty, thus we cannot draw."
-      //   );
-
-      //   return;
-      // }
+      var { books } = this.options;
 
       this.element.addClass(this.options.className);
       // create the dom of this gadget using its template
-      this.element.html(template({ repos }));
+      this.element.html(template({ books }));
+    },
+
+    _loadData: function() {
+      this._getFilters();
+    },
+
+    _loadFilters: function() {
+      axios
+        .get("/filters")
+        .then(({ data }) => {
+          dispatch({
+            type: FETCH_FILTER_FULFILLED,
+            payload: data
+          });
+        })
+        .catch(err => {
+          dispatch({
+            type: FETCH_FILTER_REJECTED,
+            payload: err
+          });
+        });
     },
 
     /**
@@ -62,8 +76,16 @@ define(["jquery.plugins", "hbs!./myWidget", "css!./myWidget"], function(
         // lorem
       });
 
-      self.element.on("click", ".submit", function() {
-        self._trigger("getrepos", null, { handle: self.element.find(".handle").val() });
+      self.element.on("click", "#submit", function() {
+        self._trigger("fetch", null, {
+          handle: self.element.find("#handle").val()
+        });
+      });
+
+      self.element.on("keyup", "#handle", function() {
+        if (event.keyCode === 13) {
+          $("#submit").click();
+        }
       });
     },
 
