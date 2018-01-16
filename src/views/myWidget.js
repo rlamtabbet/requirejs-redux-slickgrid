@@ -4,10 +4,11 @@ define(
     "axios",
     "constants/index",
     "vo/bookVO",
+    "./connect",
     "hbs!./myWidget",
     "css!./myWidget"
   ],
-  function($, axios, constants, bookVO, template) {
+  function($, axios, constants, bookVO, connect, template) {
     "use strict";
 
     const {
@@ -21,14 +22,14 @@ define(
      * @class myWidget
      * @memberof views.myWidget
      */
-    return $.widget("ux.myWidget", {
+    const myWidget = $.widget("ux.myWidget", {
       options: {
         className: "ux-widget",
         title: "Unavailable"
       },
 
       _create: function() {
-        this.dataStore = this.options.store;
+        this.element.addClass(this.options.className);
 
         this._render();
         this._bindListener();
@@ -36,12 +37,39 @@ define(
       },
 
       _setOption: function(key, value) {
-        this.options[key] = value;
+        var prev = this.options[key],
+          fnMap = {
+            books: function() {
+              value = value.items.map(curr => new bookVO(curr.volumeInfo));
+            }
+          };
 
-        if (key === "books") {
-          this._render();
-          // this._loadData();
+        // base
+        this._super(key, value);
+
+        if (key in fnMap) {
+          fnMap[key]();
+
+          // Fire event
+          this._triggerOptionChanged(key, prev, value);
         }
+      },
+
+      _triggerOptionChanged: function(optionKey, previousValue, currentValue) {
+        this._trigger(
+          "setOption",
+          { type: "setOption" },
+          {
+            option: optionKey,
+            previous: previousValue,
+            current: currentValue
+          }
+        );
+      },
+
+      _refresh: function(books) {
+        // create the dom of this gadget using its template.
+        this.element.html(template({ books }));
       },
 
       /**
@@ -49,52 +77,14 @@ define(
        * @private
        */
       _render: function() {
-        const self = this;
-        const store = this.dataStore;
         const { books = [] } = this.options;
 
-        this.element.addClass(this.options.className);
-        // create the dom of this gadget using its template
-
-        const parseBooksState = ({ books }) =>
-          books.items.map(curr => new bookVO(curr.volumeInfo));
-
-        this.unsubscribe = store.subscribe(() => {
-          const books = parseBooksState(store.getState());
-
-          self.option("books", books);
-          logger.info("Store Changed", store.getState());
-        });
-
+        // create the dom of this gadget using its template.
         this.element.html(template({ books }));
       },
 
       _fetchData: function(event, data) {
-        console.log(data);
-        this.dataStore.dispatch(dispatch => {
-          dispatch({
-            type: FETCH_DATA_PENDING,
-            payload: data.handle
-          });
-          axios
-            .get(
-              `https://www.googleapis.com/books/v1/volumes?q=${
-                data.handle
-              }&maxResults=40`
-            )
-            .then(({ data }) => {
-              dispatch({
-                type: FETCH_DATA_FULFILLED,
-                payload: data
-              });
-            })
-            .catch(err => {
-              dispatch({
-                type: FETCH_DATA_REJECTED,
-                payload: err
-              });
-            });
-        });
+        this.options.fetchData(data.handle);
       },
 
       _loadData: function() {
@@ -123,17 +113,19 @@ define(
        * @private
        */
       _bindListener: function() {
-        var self = this,
-          $handle = self.element.find("#handle");
+        var self = this;
 
-        self._on("fetch", this._fetchData.bind(this));
+        // refresh on changes to books
+        this.element.on("mywidgetsetoption", function(event, data) {
+          if (data.option === "books") {
+            // shallow compare data.current and self.options.books before refreshing
+            self._refresh(data.current);
+          }
+        });
 
         self.element.on("click", "#submit", function() {
-          // self._trigger("fetch", null, {
-          //   handle: $handle.val()
-          // });
           self._fetchData(null, {
-            handle: $handle.val()
+            handle: self.element.find("#handle").val()
           });
         });
 
@@ -142,17 +134,39 @@ define(
             $("#submit").click();
           }
         });
-      },
-
-      /**
-       * Clean up.
-       * @private
-       */
-      _destroy: function() {
-        // Unsubscribe from the redux store
-        this.unsubscribe();
-        this._super();
       }
     });
+
+    return connect(
+      // Given Redux state, return props
+      state => ({
+        books: state.books.items.map(curr => new bookVO(curr.volumeInfo))
+      }),
+      // Given Redux dispatch, return callback props
+      dispatch => ({
+        fetchData(query) {
+          dispatch({
+            type: FETCH_DATA_PENDING,
+            payload: query
+          });
+          axios
+            .get(
+              `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=40`
+            )
+            .then(({ data }) => {
+              dispatch({
+                type: FETCH_DATA_FULFILLED,
+                payload: data
+              });
+            })
+            .catch(err => {
+              dispatch({
+                type: FETCH_DATA_REJECTED,
+                payload: err
+              });
+            });
+        }
+      })
+    )(myWidget, window.store);
   }
 );

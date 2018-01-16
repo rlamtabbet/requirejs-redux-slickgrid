@@ -1,7 +1,7 @@
 define(["../constants/index", "redux"], function(constants, Redux) {
   "use strict";
 
-  const errorReducer = (state = {}, action) => {
+  const errorReducer = (state = {}, action = {}) => {
     switch (action.type) {
       case "500":
         return { ...state, name: action.payload };
@@ -14,7 +14,7 @@ define(["../constants/index", "redux"], function(constants, Redux) {
     }
   };
 
-  const userReducer = (state = {}, action) => {
+  const userReducer = (state = {}, action = {}) => {
     switch (action.type) {
       case "CHANGE_NAME":
         return { ...state, name: action.payload };
@@ -35,10 +35,11 @@ define(["../constants/index", "redux"], function(constants, Redux) {
   const {
     FETCH_DATA_PENDING,
     FETCH_DATA_FULFILLED,
-    FETCH_DATA_REJECTED
+    FETCH_DATA_REJECTED,
+    CLEAR_ALL
   } = constants;
 
-  const bookReducer = (state = initialState, action) => {
+  const bookReducer = (state = initialState, action = {}) => {
     switch (action.type) {
       case FETCH_DATA_PENDING:
         return { ...state, pending: true, fetched: false };
@@ -55,8 +56,8 @@ define(["../constants/index", "redux"], function(constants, Redux) {
           pending: false,
           error: action.payload
         };
-      case "CLEAR_ALL":
-        return [];
+      case CLEAR_ALL:
+        return initialState;
       default:
         return state;
     }
