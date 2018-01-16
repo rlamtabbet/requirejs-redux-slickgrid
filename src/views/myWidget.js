@@ -1,6 +1,7 @@
 define(
   [
     "jquery.plugins",
+    "common/ObjectUtils",
     "axios",
     "constants/index",
     "vo/bookVO",
@@ -8,7 +9,7 @@ define(
     "hbs!./myWidget",
     "css!./myWidget"
   ],
-  function($, axios, constants, bookVO, connect, template) {
+  function($, ObjectUtils, axios, constants, bookVO, connect, template) {
     "use strict";
 
     const {
@@ -40,7 +41,7 @@ define(
         var prev = this.options[key],
           fnMap = {
             books: function() {
-              value = value.items.map(curr => new bookVO(curr.volumeInfo));
+              // value = value.items.map(curr => new bookVO(curr.volumeInfo));
             }
           };
 
@@ -67,8 +68,9 @@ define(
         );
       },
 
-      _refresh: function(books) {
-        // create the dom of this gadget using its template.
+      _refresh: function(data) {
+        var books = data.items.map(curr => new bookVO(curr.volumeInfo));
+
         this.element.html(template({ books }));
       },
 
@@ -117,8 +119,10 @@ define(
 
         // refresh on changes to books
         this.element.on("mywidgetsetoption", function(event, data) {
-          if (data.option === "books") {
-            // shallow compare data.current and self.options.books before refreshing
+          if (
+            data.option === "books" &&
+            !ObjectUtils.shallowEqual(data.current.items, data.previous.items)
+          ) {
             self._refresh(data.current);
           }
         });
