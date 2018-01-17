@@ -17,7 +17,7 @@ define(["jquery.plugins"], function($) {
         ),
 
         handleChange() {
-          var state = store.getState();
+          var state = mapStateToProps(store.getState());
 
           this.option(state);
         },

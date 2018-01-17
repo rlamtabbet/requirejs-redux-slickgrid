@@ -4,12 +4,12 @@ define(
     "common/ObjectUtils",
     "axios",
     "constants/index",
-    "vo/bookVO",
     "./connect",
+    "reducers/selectors",
     "hbs!./myWidget",
     "css!./myWidget"
   ],
-  function($, ObjectUtils, axios, constants, bookVO, connect, template) {
+  function($, ObjectUtils, axios, constants, connect, selectors, template) {
     "use strict";
 
     const {
@@ -41,7 +41,7 @@ define(
         var prev = this.options[key],
           fnMap = {
             books: function() {
-              // value = value.items.map(curr => new bookVO(curr.volumeInfo));
+              // do somthing here.
             }
           };
 
@@ -68,9 +68,7 @@ define(
         );
       },
 
-      _refresh: function(data) {
-        var books = data.items.map(curr => new bookVO(curr.volumeInfo));
-
+      _refresh: function(books) {
         this.element.html(template({ books }));
       },
 
@@ -121,7 +119,7 @@ define(
         this.element.on("mywidgetsetoption", function(event, data) {
           if (
             data.option === "books" &&
-            !ObjectUtils.shallowEqual(data.current.items, data.previous.items)
+            !ObjectUtils.shallowEqual(data.current, data.previous)
           ) {
             self._refresh(data.current);
           }
@@ -144,7 +142,8 @@ define(
     return connect(
       // Given Redux state, return props
       state => ({
-        books: state.books.items.map(curr => new bookVO(curr.volumeInfo))
+        books: selectors.getBooks(state),
+        isLoading: selectors.isLoading(state)
       }),
       // Given Redux dispatch, return callback props
       dispatch => ({

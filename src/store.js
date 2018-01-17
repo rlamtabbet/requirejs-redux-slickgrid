@@ -18,7 +18,7 @@ require(["redux", "thunk", "reducers/reducers"], function(
     return returnValue;
   };
 
-  const errorMiddleware = store => next => action => {
+  const errorMiddleware = () => next => action => {
     try {
       next(action);
     } catch (e) {

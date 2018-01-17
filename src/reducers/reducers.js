@@ -36,7 +36,10 @@ define(["../constants/index", "redux"], function(constants, Redux) {
     FETCH_DATA_PENDING,
     FETCH_DATA_FULFILLED,
     FETCH_DATA_REJECTED,
-    CLEAR_ALL
+    CLEAR_ALL,
+    ERROR,
+    USER,
+    BOOKS
   } = constants;
 
   const bookReducer = (state = initialState, action = {}) => {
@@ -64,9 +67,9 @@ define(["../constants/index", "redux"], function(constants, Redux) {
   };
 
   const reducers = Redux.combineReducers({
-    error: errorReducer,
-    user: userReducer,
-    books: bookReducer
+    [ERROR]: errorReducer,
+    [USER]: userReducer,
+    [BOOKS]: bookReducer
   });
 
   return reducers;
